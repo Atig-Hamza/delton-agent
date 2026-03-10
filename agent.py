@@ -8,6 +8,8 @@
 
 import json
 import re
+import random
+import time as _time
 from openai import OpenAI
 from config import (
     NVIDIA_BASE_URL, NVIDIA_API_KEY, NVIDIA_MODEL,
@@ -38,29 +40,72 @@ class DeltonAgent:
 
     def _init_system_prompt(self):
         """Initialize the master system prompt for DELTON AI."""
-        self.system_prompt = """You are DELTON AI — an elite AI video montage director and editor.
-You think and plan like a professional filmmaker with 20+ years of After Effects and Premiere Pro experience.
+        self.system_prompt = """You are DELTON AI — an elite motion-design director and After Effects master with 20+ years crafting world-class ads for Apple, Nike, Samsung, and top Facebook/Instagram campaigns.
 
-YOUR ROLE: Analyze user requests and generate DETAILED JSON montage plans that a rendering engine can execute.
+YOUR ROLE: Receive a creative brief and output a UNIQUE, PREMIUM, production-ready JSON montage plan every single time. Each plan must be visually distinct from anything previously generated.
 
-AVAILABLE TRANSITIONS: fade, crossfade, zoom_in, zoom_out, whip_pan_left, whip_pan_right, whip_pan_up, whip_pan_down, glitch, rgb_split, light_leak, luma_fade, spin, slice_horizontal, slice_vertical, film_burn, dissolve, wipe_left, wipe_right, wipe_up, wipe_down, circle_reveal, diamond_reveal, pixelate, blur_transition, flash_white, flash_black
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PREMIUM MOTION DESIGN PRINCIPLES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• EASING: All animations use ease-in-out. No linear motion ever.
+• STAGGER: Elements appear sequentially — never all at once. Add 0.10–0.18s delay between each element.
+• BREATHING ROOM: Give text space. Use large font sizes (2.5–5.0) and generous vertical spacing.
+• 3-COLOR RULE: Max 3 colors per scene. Pick a dominant, secondary, and accent.
+• 60-30-10 RULE: 60% background, 30% main element color, 10% accent.
+• MICRO-ANIMATIONS: Icons subtly pulse or rotate. Text has slight scale-up on hold.
+• HOLD FRAMES: Important messages stay visible for at least 1.5s before exit animation.
+• SMOOTH EXITS: Exit animation_out_delay must give content time to breathe before leaving.
+• SOUND DESIGN: Every transition has a matching sound. Every text reveal has a subtle pop/shimmer.
+• PACING: Hook in first 2s. Build tension. Release at climax. Calm CTA close.
 
-AVAILABLE COLOR GRADES: cinematic_teal_orange, warm_golden, cool_blue, dark_moody, vintage_film, neon_cyberpunk, clean_bright, bw_dramatic, pastel_soft, luxury_dark_gold
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STYLE REFERENCES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Apple: Pure white/black bg, San Francisco-style type, slow zoom, whisper-quiet sound, luma_fade transitions, one bold product claim per scene.
+• Facebook/Instagram Ads: Hook within 2s, bold color, high contrast, fast-paced (8–15 scenes), zoom_in/whip_pan, social_viral style, portrait format preferred.
+• Nike: Dark bg, high contrast, fast cuts, impact sounds, glitch/flash_black transitions, kinetic typography.
+• Luxury/Premium: Black gold palette, elegant font, light_leak transitions, slow builds, orchestral feel, film_grain on.
+• Tech SaaS: Deep blue/cyan, glassmorphism, blur_transition, counter elements showing stats, particles_bokeh.
 
-AVAILABLE AD STYLES: apple_clean, nike_bold, luxury_elegance, tech_modern, social_viral, cinematic_story
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+AVAILABLE OPTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TRANSITIONS: fade, crossfade, zoom_in, zoom_out, whip_pan_left, whip_pan_right, whip_pan_up, whip_pan_down, glitch, rgb_split, light_leak, luma_fade, spin, slice_horizontal, slice_vertical, film_burn, dissolve, wipe_left, wipe_right, wipe_up, wipe_down, circle_reveal, diamond_reveal, pixelate, blur_transition, flash_white, flash_black
 
-AVAILABLE ICONS (Lucide): zap, rocket, shield, lock, star, award, crown, headphones, message_circle, globe, dollar_sign, clock, settings, bar_chart, trending_up, cloud, download, play, video, camera, image, music, heart, check_circle, arrow_right, user, users, smartphone, monitor, brain, sparkles, film, scissors, palette, volume_2, layers, target, eye, sun, moon, send
+COLOR GRADES: cinematic_teal_orange, warm_golden, cool_blue, dark_moody, vintage_film, neon_cyberpunk, clean_bright, bw_dramatic, pastel_soft, luxury_dark_gold
 
-AVAILABLE SOUND EFFECTS: whoosh, impact, riser, pop, click, shimmer, bass_drop, reverse_cymbal, notification, sweep
+AD STYLES: apple_clean, nike_bold, luxury_elegance, tech_modern, social_viral, cinematic_story
 
-SPEED EFFECTS: normal (1.0), slow_motion (0.3-0.5), fast (1.5-3.0), speed_ramp (variable), reverse, freeze_frame
+ICONS: zap, rocket, shield, lock, star, award, crown, headphones, message_circle, globe, dollar_sign, clock, settings, bar_chart, trending_up, cloud, download, play, video, camera, image, music, heart, check_circle, arrow_right, user, users, smartphone, monitor, brain, sparkles, film, scissors, palette, volume_2, layers, target, eye, sun, moon, send
 
-VFX OPTIONS: particles_dust, particles_sparks, particles_bokeh, particles_snow, particles_rain, light_rays, lens_flare, screen_shake, split_screen_2, split_screen_3, split_screen_4, vignette, film_grain, blur_background, glow, chromatic_aberration
+SOUND EFFECTS: whoosh, impact, riser, pop, click, shimmer, bass_drop, reverse_cymbal, notification, sweep
+
+SPEED EFFECTS: normal (1.0), slow_motion (0.3–0.5), fast (1.5–3.0), speed_ramp, reverse, freeze_frame
+
+VFX: particles_dust, particles_sparks, particles_bokeh, particles_snow, particles_rain, light_rays, lens_flare, screen_shake, split_screen_2, split_screen_3, split_screen_4, vignette, film_grain, blur_background, glow, chromatic_aberration
 
 TEXT ANIMATIONS: fade_in, slide_up, slide_down, slide_left, slide_right, scale_up, scale_down, bounce, typewriter, glitch_text, blur_in, rotate_in, flip_in, wave, kinetic_pop
 
-RESPONSE FORMAT — You MUST respond with valid JSON in this exact structure:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STRICT OUTPUT RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Respond with ONLY valid JSON — zero markdown, zero explanation outside the JSON.
+2. Minimum 6 scenes. Premium ads: 8–12 scenes.
+3. Every scene has 2–5 elements with staggered delays.
+4. NEVER use the same transition twice in a row. Vary them across scenes.
+5. NEVER generate the same plan twice — use the style, product, and mood to make it unique.
+6. Timings must be exact and cumulative (start_time of scene N = end_time of scene N-1).
+7. Positions: percentages 0–100 for x and y. Center = [50, 50].
+8. Size: scale factor. 1.0 = default. Headings: 2.5–5.0. Body: 1.0–1.8.
+9. animation_out must be a valid exit animation (e.g. scale_down, fade_in, slide_down).
+10. animation_out_delay must be: scene duration - 0.3s (leave room for exit).
+11. Total bitrate for premium: use "12000k". For social: "8000k".
+12. For Facebook/Instagram ads: use portrait format [1080, 1920] and fps: 30.
+13. For Apple/Luxury ads: use landscape [1920, 1080], fps: 30, letterbox: true.
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REQUIRED JSON STRUCTURE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 {
     "project_name": "string",
     "description": "string",
@@ -104,8 +149,8 @@ RESPONSE FORMAT — You MUST respond with valid JSON in this exact structure:
                     "animation_in_duration": float_seconds,
                     "animation_out_delay": float_seconds,
                     "icon_name": "icon_name or null",
-                    "counter_start": "int or null",
-                    "counter_end": "int or null"
+                    "counter_start": null,
+                    "counter_end": null
                 }
             ],
             "transition_in": "transition_name or null",
@@ -126,29 +171,17 @@ RESPONSE FORMAT — You MUST respond with valid JSON in this exact structure:
     "global_effects": {
         "vignette": true,
         "film_grain": false,
-        "grain_intensity": 0.05,
+        "grain_intensity": 0.04,
         "letterbox": false,
         "letterbox_ratio": 2.35
     },
     "export": {
         "format": "mp4",
         "codec": "libx264",
-        "bitrate": "8000k",
+        "bitrate": "12000k",
         "audio": true
     }
-}
-
-IMPORTANT RULES:
-1. ALWAYS respond with ONLY valid JSON — no markdown, no explanations outside JSON
-2. Create at least 5 scenes for any video
-3. Every scene MUST have at least one element
-4. Use diverse transitions — don't repeat the same one
-5. Color choices must match the mood
-6. For premium ads, think Apple/Nike/Samsung quality
-7. Timing must be precise and add up correctly
-8. Position uses percentages (0-100) for x and y
-9. Size is a scale factor (1.0 = default, 2.0 = double)
-10. Include sound effects for major transitions and reveals"""
+}"""
 
         self.conversation_history = [
             {"role": "system", "content": self.system_prompt}
@@ -158,19 +191,60 @@ IMPORTANT RULES:
         """Activate Premium Ad Agent mode."""
         self.mode = "premium_ad"
         premium_context = """
-PREMIUM AD MODE ACTIVATED. You are now creating After Effects-quality advertisements.
-Apply these premium principles:
-- Every animation uses ease-in-out (smooth)
-- Overshoot/bounce on text entrances
-- Stagger animations (elements appear sequentially, not all at once)
-- Use anticipation → action → follow-through
-- Maximum 3 colors per composition
-- 60-30-10 color rule
-- Glassmorphism and gradient mesh for modern feel
-- Depth of field blur on backgrounds
-- Subtle particle overlays
-- Premium sound design on every transition
-- Think: Apple ads, Nike ads, Samsung ads level quality
+╔══════════════════════════════════════════════════╗
+║          PREMIUM AD DIRECTOR MODE                ║
+╚══════════════════════════════════════════════════╝
+
+You are now operating as a world-class motion design director.
+Every plan you generate must feel like a $500,000 broadcast commercial.
+
+MANDATORY PREMIUM RULES:
+━━━━━━━━━━━━━━━━━━━━━━━━
+① FORMAT
+   • Portrait [1080×1920] for Facebook/Instagram/TikTok ads
+   • Landscape [1920×1080] for YouTube/TV/Apple style
+   • Always use fps: 30, bitrate: "12000k"
+
+② SCENE STRUCTURE (minimum 8 scenes)
+   • Scene 1 — HOOK (0–2s): Bold single statement. Grab attention immediately.
+   • Scene 2 — PROBLEM / TENSION (2–5s): Establish what the viewer is missing.
+   • Scene 3–5 — FEATURES (5–12s): One key benefit per scene. Icon + text pairing.
+   • Scene 6–7 — PROOF / SOCIAL (12–18s): Counter elements, stats, or testimonial copy.
+   • Scene 8 — CLIMAX (18–21s): Brand moment. Big logo or product name. Lens flare.
+   • Scene 9 — CTA (21–25s): Single clear call-to-action. Minimal. Centered.
+
+③ ANIMATION QUALITY
+   • Entrance durations: 0.4–0.7s (never faster, never slower)
+   • Always stagger elements: 0.12s delay between each element in a scene
+   • Use kinetic_pop or scale_up for headings — never plain fade_in for hero text
+   • Exit (animation_out_delay) = scene duration − 0.4s
+
+④ COLOR & AESTHETICS
+   • Maximum 3 colors. 60-30-10 rule strictly enforced.
+   • Background must be intentional: black, white, deep navy, or a rich gradient
+   • Accent color must pop against the background (high contrast)
+   • Use glow VFX on accent-colored icons
+   • Apply vignette on every scene
+
+⑤ TRANSITIONS (vary every single scene)
+   • Apple style: luma_fade, crossfade, zoom_in (slow, 0.6s)
+   • Nike/Social: flash_black, rgb_split, whip_pan_right (fast, 0.25–0.35s)
+   • Luxury: light_leak, film_burn, dissolve (elegant, 0.5s)
+   • Never use the same transition twice in a row
+
+⑥ SOUND DESIGN
+   • Every transition: whoosh or impact
+   • Every text reveal: pop or shimmer
+   • Climax scene: bass_drop + riser combo
+   • CTA scene: notification or soft shimmer
+
+⑦ GLOBAL EFFECTS
+   • vignette: true always
+   • film_grain: true for luxury/cinematic, false for clean/tech
+   • grain_intensity: 0.03–0.06 (subtle)
+   • letterbox: true for Apple/cinematic styles (ratio 2.35)
+
+Generate a plan that a senior Art Director at BBDO would approve on first pass.
 """
         self.conversation_history.append(
             {"role": "system", "content": premium_context}
@@ -194,9 +268,35 @@ Apply these premium principles:
         if "premium ad" in user_request.lower() or "premium mode" in user_request.lower():
             self.activate_premium_mode()
 
+        # ── Reset history for every new generation so the AI never echoes
+        # a previous plan. The refinement path (refine_plan) appends to the
+        # existing history intentionally.
+        self._init_system_prompt()
+        if self.mode == "premium_ad":
+            self.activate_premium_mode()
+
+        # ── Uniqueness seed: timestamp + random adjective so the AI is
+        # forced to think fresh on every call.
+        _seed = f"{int(_time.time())}-{random.randint(1000, 9999)}"
+        _vibes = random.choice([
+            "bold and unexpected", "sleek and minimalist", "high-energy and kinetic",
+            "dark and cinematic", "bright and optimistic", "neon and futuristic",
+            "warm and emotional", "cold and corporate", "organic and natural",
+            "maximalist and vibrant", "editorial and luxury", "raw and documentary",
+        ])
+        enriched_request = (
+            f"{user_request}\n\n"
+            f"[CREATIVE SEED: {_seed} | VISUAL VIBE: {_vibes}]\n"
+            f"This must be a completely unique plan — do NOT reuse colors, scene order, "
+            f"or transitions from any previous response. Surprise me.\n\n"
+            f"CRITICAL: Your entire response must be a single valid JSON object. "
+            f"No markdown fences, no explanation text, no preamble, no postamble. "
+            f"Start your response with {{ and end it with }}. Nothing else."
+        )
+
         # Add user message
         self.conversation_history.append(
-            {"role": "user", "content": user_request}
+            {"role": "user", "content": enriched_request}
         )
 
         try:
@@ -212,22 +312,26 @@ Apply these premium principles:
             )
 
             for chunk in completion:
-                if chunk.choices[0].delta.content is not None:
-                    response_text += chunk.choices[0].delta.content
-
-            # Save to history
-            self.conversation_history.append(
-                {"role": "assistant", "content": response_text}
-            )
-
-            # Parse JSON from response
-            montage_plan = self._parse_json_response(response_text)
-            self.current_project = montage_plan
-            return montage_plan
+                # Guard: some terminal chunks have empty choices list
+                if not chunk.choices:
+                    continue
+                delta_content = chunk.choices[0].delta.content
+                if delta_content is not None:
+                    response_text += delta_content
 
         except Exception as e:
             print(f"[DELTON AI] Error communicating with Kimi K2.5: {e}")
             return self._generate_fallback_plan(user_request)
+
+        # Save to history (useful if the user refines right after)
+        self.conversation_history.append(
+            {"role": "assistant", "content": response_text}
+        )
+
+        # Parse JSON from response (errors here should NOT trigger the fallback silently)
+        montage_plan = self._parse_json_response(response_text)
+        self.current_project = montage_plan
+        return montage_plan
 
     def refine_plan(self, feedback: str) -> dict:
         """
@@ -251,48 +355,65 @@ Respond with ONLY valid JSON.
 
     def _parse_json_response(self, response_text: str) -> dict:
         """Extract and parse JSON from AI response."""
-        # Try direct parse first
+        if not response_text or not response_text.strip():
+            print("[DELTON AI] Warning: Empty response from AI.")
+            return self._generate_fallback_plan("default montage")
+
+        # 1. Direct parse — model returned pure JSON
         try:
-            return json.loads(response_text)
+            return json.loads(response_text.strip())
         except json.JSONDecodeError:
             pass
 
-        # Try to find JSON in the response
-        json_patterns = [
-            r'```json\s*(.*?)\s*```',
-            r'```\s*(.*?)\s*```',
-            r'(\{.*\})',
-        ]
+        # 2. Strip markdown fences (handles ```json...``` and ```...```)
+        fence_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', response_text, re.DOTALL)
+        if fence_match:
+            try:
+                return json.loads(fence_match.group(1))
+            except json.JSONDecodeError:
+                pass
 
-        for pattern in json_patterns:
-            matches = re.findall(pattern, response_text, re.DOTALL)
-            for match in matches:
-                try:
-                    return json.loads(match)
-                except json.JSONDecodeError:
-                    continue
-
-        # If nothing works, try cleaning the response
-        cleaned = response_text.strip()
-        if cleaned.startswith('{'):
-            # Find the last closing brace
+        # 3. Find the first '{' anywhere in the response and balance braces.
+        #    This handles any preamble text the model adds before the JSON.
+        first_brace = response_text.find('{')
+        if first_brace != -1:
             brace_count = 0
-            end_idx = 0
-            for i, char in enumerate(cleaned):
-                if char == '{':
+            end_idx = first_brace
+            for i in range(first_brace, len(response_text)):
+                c = response_text[i]
+                if c == '{':
                     brace_count += 1
-                elif char == '}':
+                elif c == '}':
                     brace_count -= 1
                     if brace_count == 0:
                         end_idx = i + 1
                         break
+            candidate = response_text[first_brace:end_idx]
             try:
-                return json.loads(cleaned[:end_idx])
+                return json.loads(candidate)
             except json.JSONDecodeError:
-                pass
+                # JSON found but malformed — try json5-style repair: strip trailing commas
+                repaired = re.sub(r',\s*([}\]])', r'\1', candidate)
+                try:
+                    return json.loads(repaired)
+                except json.JSONDecodeError:
+                    pass
 
-        print("[DELTON AI] Warning: Could not parse AI response as JSON. Using fallback.")
+        # 4. Nothing worked — save raw response for inspection
+        self._debug_save_response(response_text)
+        print("[DELTON AI] Warning: Could not parse AI response as JSON.")
+        print("[DELTON AI] Raw response saved to output/debug_last_response.txt — check it to see what the model returned.")
         return self._generate_fallback_plan("default montage")
+
+    def _debug_save_response(self, text: str):
+        """Save raw AI response to a debug file for inspection."""
+        import os
+        os.makedirs("output", exist_ok=True)
+        try:
+            with open("output/debug_last_response.txt", "w", encoding="utf-8") as f:
+                f.write(text)
+        except Exception:
+            pass
 
     def _generate_fallback_plan(self, request: str) -> dict:
         """Generate a basic fallback montage plan if AI fails."""
