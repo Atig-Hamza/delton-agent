@@ -1,0 +1,14 @@
+openai>=1.0.0
+moviepy==1.0.3
+Pillow>=10.0.0
+numpy>=1.24.0
+librosa>=0.10.0
+pydub>=0.25.1
+rich>=13.0.0
+requests>=2.31.0
+scipy>=1.11.0
+imageio>=2.31.0
+imageio-ffmpeg>=0.4.8
+cairosvg>=2.7.0
+fonttools>=4.42.0
+soundfile>=0.12.0
