@@ -49,6 +49,11 @@ class Exporter:
         if fmt == "gif":
             clip.write_gif(output_path, fps=min(fps, 15), verbose=False, logger=None)
         else:
+            # preset=ultrafast + threads dramatically cuts encoding time
+            extra = {}
+            if codec == "libx264":
+                extra["preset"] = "ultrafast"
+                extra["threads"] = 4
             clip.write_videofile(
                 output_path,
                 fps=fps,
@@ -58,6 +63,7 @@ class Exporter:
                 audio_codec=audio_codec if include_audio else None,
                 verbose=False,
                 logger=None,
+                **extra,
             )
 
         return output_path

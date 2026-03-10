@@ -84,7 +84,7 @@ class MotionGraphicsEngine:
 
     def _anim_offset(self, anim_in: str, progress: float, element: dict):
         """Return (dx, dy) pixel offset based on animation type."""
-        dist = 60  # slide distance in pixels
+        dist = 55  # slide distance in pixels
         inv = 1.0 - progress
         if anim_in == "slide_up":
             return (0, int(dist * inv))
@@ -94,6 +94,10 @@ class MotionGraphicsEngine:
             return (int(dist * inv), 0)
         if anim_in == "slide_right":
             return (-int(dist * inv), 0)
+        # kinetic_pop: slight vertical spring-in from below
+        if anim_in == "kinetic_pop":
+            spring = 1.0 - progress
+            return (0, int(30 * spring))
         return (0, 0)
 
     # ─── Text ─────────────────────────────────────────
@@ -129,9 +133,8 @@ class MotionGraphicsEngine:
             content = content[:visible_chars]
             alpha = 1.0  # text is always fully opaque once shown
 
-        # Scale-up animation — we approximate by changing font size
-        if anim == "scale_up":
-            anim_in_dur = float(element.get("animation_in_duration", 0.4))
+        # scale_up / kinetic_pop — grow from small to full size
+        if anim in ("scale_up", "kinetic_pop"):
             font_size = max(10, int(font_size * (0.5 + 0.5 * alpha)))
             font = self._get_font(font_key, font_size)
 
@@ -146,6 +149,13 @@ class MotionGraphicsEngine:
         text_alpha = int(255 * min(alpha, 1.0))
         rgba_color = (*color[:3], text_alpha)
 
+        # Drop shadow — adds depth and readability on any background
+        shadow_alpha = int(text_alpha * 0.55)
+        if shadow_alpha > 10:
+            shadow_offset = max(2, font_size // 28)
+            draw.text((x + shadow_offset, y + shadow_offset), content,
+                      font=font, fill=(0, 0, 0, shadow_alpha))
+
         draw.text((x, y), content, font=font, fill=rgba_color)
 
         base_rgba = img.convert("RGBA")
@@ -153,14 +163,17 @@ class MotionGraphicsEngine:
         return result.convert(img.mode) if img.mode != "RGBA" else result
 
     def _base_text_size(self, width: int, height: int, element: dict) -> int:
-        """Determine a sensible base font size from element type/content."""
+        """Determine a sensible base font size from canvas size and content length."""
         content = element.get("content", "")
-        # Shorter text → larger size
-        if len(content) <= 10:
-            return max(36, width // 20)
-        if len(content) <= 30:
-            return max(28, width // 30)
-        return max(20, width // 40)
+        short_side = min(width, height)
+        # Scale with canvas so portrait/square/landscape all look proportional
+        if len(content) <= 8:
+            return max(48, short_side // 12)
+        if len(content) <= 20:
+            return max(36, short_side // 18)
+        if len(content) <= 40:
+            return max(26, short_side // 26)
+        return max(20, short_side // 36)
 
     # ─── Icon ─────────────────────────────────────────
     def _draw_icon(self, img: Image.Image, element: dict,

@@ -28,7 +28,8 @@ class VFXEngine:
         cx, cy = w / 2, h / 2
         Y, X = np.ogrid[:h, :w]
         dist = np.sqrt(((X - cx) / cx) ** 2 + ((Y - cy) / cy) ** 2)
-        vignette = np.clip(1.0 - 0.6 * dist, 0, 1)[..., np.newaxis]
+        # Strength 0.30 — subtle, premium, not crushing the corners
+        vignette = np.clip(1.0 - 0.30 * dist, 0, 1)[..., np.newaxis]
         arr = arr * vignette
         result = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
         if img.mode == "RGBA":
@@ -38,7 +39,8 @@ class VFXEngine:
     # ─── Film Grain ───────────────────────────────────
     def _fx_film_grain(self, img, t, duration):
         arr = np.array(img.convert("RGB")).astype(np.float32)
-        noise = np.random.normal(0, 8, arr.shape).astype(np.float32)
+        # Sigma 3 — barely perceptible, just adds texture without noise
+        noise = np.random.normal(0, 3, arr.shape).astype(np.float32)
         arr = np.clip(arr + noise, 0, 255).astype(np.uint8)
         result = Image.fromarray(arr)
         if img.mode == "RGBA":
